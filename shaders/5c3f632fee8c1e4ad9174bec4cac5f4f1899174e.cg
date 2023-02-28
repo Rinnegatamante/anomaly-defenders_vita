@@ -1,0 +1,43 @@
+// profile sce_fp_psp2
+
+#define POSTPROCESSING_ENABLED
+#define _ANDROID
+#define HEALTHBAR_MODE
+
+
+uniform sampler2D Texture0;
+
+#ifdef ROUND_PROGRESS_MODE
+	#endif
+
+#define BW float3(0.2126,0.7152,0.0722)
+
+void main(
+	float4 colorVarying : COLOR,
+	float2 uv0Varying : TEXCOORD0,
+	float4 paramVarying : TEXCOORD1,
+	float2 dirVarying : TEXCOORD2,
+	float4 out gl_FragColor : COLOR
+) {
+	float4 color = colorVarying;
+	float4 txt = tex2D(Texture0,uv0Varying);
+
+#ifdef HEALTHBAR_MODE
+	txt *= uv0Varying.x < paramVarying.x ? float4(1.0,1.0,1.0,1.0) : float4(0.0,0.0,0.0,1.0-paramVarying.x);
+#elif defined(GREY_HEALTHBAR_MODE)
+	color = (uv0Varying.x > paramVarying.x && uv0Varying.x < paramVarying.y) ? color : float4(0.05,0.05,0.05,1.0);
+#elif defined(ROUND_PROGRESS_MODE)
+	float2 off=normalize(dirVarying);
+	float2 ff=step(off.xx*float2(1.0,-1.0),paramVarying.xy);
+	txt*=off.y<0.0?ff.y:ff.x;
+#else
+	float intensity = dot(txt.xyz,BW);
+	float3 intensityV = float3(intensity,intensity,intensity);
+	txt.xyz = lerp(intensityV,txt.xyz,clamp(color.w+paramVarying.w,0.0,1.0));
+	txt *= uv0Varying.y < paramVarying.x ? float4(0.0,0.0,0.0,0.3) : float4(1.0,1.0,1.0,1.0);
+#endif
+
+	txt *= color;
+	gl_FragColor = txt;
+}
+

@@ -1,0 +1,55 @@
+// profile sce_vp_psp2
+
+#define _ANDROID
+#define POSTPROCESSING_ENABLED
+
+
+
+uniform float4x4 ModelViewProjMatrix;
+uniform float4 ConstantColor;
+uniform float4 UserVSHParams[ 3 ];
+
+void main(
+	float4 Position,
+	float4 Normal,
+	float4 BlendWeight,
+	float4 Tangent,
+	float4 Color,
+	float4 out colorVarying : COLOR,
+	float4 out pathPosVarying : TEXCOORD1,
+	float2 out uvVarying : TEXCOORD0,
+	float4 out gl_Position : POSITION
+) {
+	float4 boundingBox[ 2 ];
+	float4 graphParams = UserVSHParams[ 0 ];
+	boundingBox[ 0 ]		 = UserVSHParams[ 1 ];
+	boundingBox[ 1 ]		 = UserVSHParams[ 2 ];
+
+	float4  prevPos		 = Position * 2.0;
+	float4  nextPos		 = Normal * 2.0;
+	float4  billboard	 = BlendWeight;
+	float4  vSide		 = Color;
+	float4  xingFactor = Tangent;	
+	float width		 = graphParams.x;
+	float mappingScale = graphParams.y;
+
+	float3 posA=lerp(boundingBox[0].xyz,boundingBox[1].xyz,prevPos.xyz);
+	float3 posB=lerp(boundingBox[0].xyz,boundingBox[1].xyz,nextPos.xyz);
+
+	float3 pos=lerp(posA,posB,billboard.x);
+	float pathPosition=lerp(prevPos.w,nextPos.w,billboard.x);
+	float4 sideVector=vSide*2.0-1.0;
+	float2 side2=lerp(sideVector.xy,sideVector.zw,billboard.x);
+	float3 side=float3(side2.x,0.0,side2.y);
+	side*=width;
+	side*=step(graphParams.z-3.5*2.5/32767.0,pathPosition);
+	pos+=side*(billboard.y-0.5);
+	float xingDistance=lerp(xingFactor.x,xingFactor.y,billboard.x);
+	uvVarying=float2(pathPosition*mappingScale,billboard.y);
+
+    gl_Position	 = mul(float4(pos,1),ModelViewProjMatrix);
+	colorVarying = ConstantColor;
+
+	float tmp = 32767.0 / 2.5 * 0.25;
+	pathPosVarying = float4( pathPosition,graphParams.zw,xingDistance ) * float4( tmp, tmp, tmp, 40.0 );
+}

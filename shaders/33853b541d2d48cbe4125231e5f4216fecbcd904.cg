@@ -1,0 +1,39 @@
+// profile sce_fp_psp2
+
+#define POSTPROCESSING_ENABLED
+#define _ANDROID
+#define FOG
+
+#ifdef FOG
+	#endif
+
+#ifdef ENV_MAP
+		uniform samplerCUBE Texture3;
+#endif
+
+uniform float4 SunSpecularColor;
+
+uniform float4 UserPSHParams[ 1 ]; // [0].x - specularMultiplier, [0].z - fog influence
+
+void main(
+	float3 colorVarying : COLOR,
+	float4 fogVarying : TEXCOORD4,
+	float3 reflWSVarying : TEXCOORD8,
+	float4 out gl_FragColor : COLOR
+) {
+	float3 color;
+
+#ifdef ENV_MAP
+	float3 envMap = texCUBE( Texture3, reflWSVarying ).xyz;
+	color = colorVarying.xyz * envMap * UserPSHParams[0].x;
+#else
+	color = colorVarying.xyz * UserPSHParams[0].x;
+#endif
+
+#ifdef FOG
+	float fog = 1.0 + UserPSHParams[0].z * (fogVarying.w - 1.0);
+	color = lerp(fogVarying.xyz, color, fog);
+#endif
+
+	gl_FragColor = float4( color, 1.0 );
+}

@@ -1,0 +1,131 @@
+// profile sce_fp_psp2
+
+#define POSTPROCESSING_ENABLED
+#define _ANDROID
+#define DESATURATION
+#define DIFFUSE_TEXTURE
+#define FOG
+#define LIGHT_PROBES
+#define RENDER_TO_IL_PROBE
+#define LIGHTMAP_DECODING_MULTIPLIER float3( 2.0, 2.0, 2.0 )
+
+
+#if defined(TERRAIN_LIGHTMAP) || defined(LIGHTMAP)
+	#endif
+
+#if defined(TERRAIN_LIGHTMAP)
+	#endif
+
+#if defined(LIGHT_PROBES)
+	#endif
+
+#ifdef FOG
+	#endif
+
+#if defined(SPECULAR)
+	#endif
+
+#if defined(NORMAL_MAP_TEXTURE)
+	#endif
+
+#ifdef ENV_MAP
+		uniform samplerCUBE Texture3;
+#endif
+
+#ifdef DESATURATION
+	uniform float4 MiscMeshParams[2];
+#endif
+
+uniform sampler2D Texture0;
+// albedo
+uniform sampler2D Texture1;
+// normal map
+uniform sampler2D Texture2;
+// emissive
+uniform sampler2D Texture6;
+// planar shadow
+uniform sampler2D Texture7;
+// light map
+
+uniform float4 SunSpecularColor;
+uniform float4 SunSpecularExp;
+uniform float4 FakeNDotLScaleBias;
+
+void main(
+	float3 colorVarying : COLOR,
+	float2 uv0Varying : TEXCOORD0,
+	float2 uvLMapVarying : TEXCOORD1,
+	float2 uvScreenVarying : TEXCOORD2,
+	float3 diffuseVarying : TEXCOORD3,
+	float4 fogVarying : TEXCOORD4,
+	float3 specularVarying : TEXCOORD6,
+	float3 lightDirTSVarying : TEXCOORD7,
+	float3 reflWSVarying : TEXCOORD8,
+	float4 out gl_FragColor : COLOR
+) {
+	
+	float4 albedo   = float4( 1.0, 1.0, 1.0, 1.0 );
+	float3 diffuse  = float3( 1.0, 1.0, 1.0 );
+	float3 specular = float3( 0.0, 0.0, 0.0 );
+
+#if defined(DIFFUSE_TEXTURE)
+	albedo = tex2D( Texture0, uv0Varying );
+	#ifdef DESATURATION
+		float lum = dot(albedo.xyz,MiscMeshParams[1].xyz);
+		float3 lum3 = float3(lum,lum,lum);
+		albedo.xyz=albedo.xyz*MiscMeshParams[0].xyz+lum3;
+	#endif
+#endif
+
+#if defined(NORMAL_MAP_TEXTURE)
+	float4 normalMap = tex2D( Texture1, uv0Varying );
+	float3 nrmTS = normalize( normalMap.xyz * float3( 2.0, 2.0, 2.0 ) - float3( 1.0, 1.0, 1.0 ) );
+#endif
+
+#if defined(SPECULAR)
+	#if defined(NORMAL_MAP_TEXTURE)
+        float ndoth = clamp( dot( nrmTS, normalize( specularVarying ) ), 0.0, 1.0 );
+        specular = SunSpecularColor.xyz * exp2( SunSpecularExp.x * ndoth + SunSpecularExp.y );
+	#else
+		specular = specularVarying;
+	#endif
+#endif
+
+#ifdef ENV_MAP
+	float3 envMap = texCUBE( Texture3, reflWSVarying ).xyz;
+	specular += envMap;
+#endif
+
+#if defined(MASK_SPECULAR_DIFFUSE_A) && defined(DIFFUSE_TEXTURE)
+	specular *= albedo.w;
+#endif
+
+#if defined(TERRAIN_LIGHTMAP) || defined(LIGHTMAP)	
+	diffuse = tex2D( Texture7, uvLMapVarying ).xyz * LIGHTMAP_DECODING_MULTIPLIER;
+#endif
+
+#if defined(TERRAIN_LIGHTMAP)
+	diffuse *= tex2D( Texture6, uvScreenVarying ).x;
+#endif
+
+#if defined(LIGHT_PROBES)
+	diffuse = diffuseVarying;
+#endif
+
+#if defined(NORMAL_MAP_TEXTURE)
+	float fakeNDotL = clamp( dot( nrmTS, normalize( lightDirTSVarying ) ), 0.0, 1.0 ) * FakeNDotLScaleBias.x + FakeNDotLScaleBias.y;
+	diffuse *= fakeNDotL;
+#endif
+
+	float3 color = colorVarying.xyz * albedo.xyz;
+	color.xyz = color.xyz * albedo.xyz * diffuse + specular * diffuse;	
+#if defined(EMISSIVE_TEXTURE)
+	color.xyz += tex2D( Texture2, uv0Varying ).xyz;
+#endif
+
+#ifdef FOG
+	color = color * fogVarying.w + fogVarying.xyz;
+#endif
+
+	gl_FragColor = float4( color, 1.0 );
+}

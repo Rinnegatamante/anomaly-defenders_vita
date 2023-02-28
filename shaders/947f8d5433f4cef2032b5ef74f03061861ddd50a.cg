@@ -1,0 +1,35 @@
+// profile sce_fp_psp2
+
+#define POSTPROCESSING_ENABLED
+#define _ANDROID
+
+uniform sampler2D Texture0;
+uniform float4 UserPSHParams[ 1 ];
+
+
+#define BW    float3(0.2126, 0.7152, 0.0722)
+
+void main(
+	float2 uv0Varying : TEXCOORD0,
+	float2 uv1Varying : TEXCOORD1,
+	float2 uv2Varying : TEXCOORD2,
+	float2 uv3Varying : TEXCOORD3,
+	float4 out gl_FragColor : COLOR
+) {
+    float4 threshold = UserPSHParams[0];
+	
+	float4 c0=tex2D(Texture0,uv0Varying);
+	float4 c1=tex2D(Texture0,uv1Varying);
+	float4 c2=tex2D(Texture0,uv2Varying);
+	float4 c3=tex2D(Texture0,uv3Varying);
+	
+	float4 color=(c0+c1+c2+c3)*0.25;
+#ifdef KOSOVO
+    float intensity=dot(color.xyz-threshold.xyz,BW);
+    color.w=intensity;
+#else
+    color-=threshold;
+#endif
+	gl_FragColor=color;
+}
+

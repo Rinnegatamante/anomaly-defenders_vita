@@ -1,0 +1,58 @@
+// profile sce_vp_psp2
+
+#define _ANDROID
+#define POSTPROCESSING_ENABLED
+#define FOG
+
+
+#ifdef FOG
+	uniform float4 FogParams;
+	uniform float4 FogColor;
+	#endif
+
+#ifdef ENV_MAP
+	#endif
+
+uniform float4 WorldSpaceEyePosition;
+
+uniform float4x4 ModelMatrix;
+uniform float4x4 InvTModelMatrix;
+uniform float4x4 ViewProjMatrix;
+
+uniform float4 ConstantColor;
+
+void main(
+	float3 Position,
+	float3 Normal,
+	float3 out colorVarying : COLOR,
+	float4 out fogVarying : TEXCOORD4,
+	float3 out reflWSVarying : TEXCOORD8,
+	float4 out gl_Position : POSITION
+) {
+	float4 pos4 = float4( Position, 1.0 );
+	float4 nrm4 = float4( Normal, 0.0 );
+
+	float3 posWS = ( mul(pos4,ModelMatrix) ).xyz;
+	float3 nrmWS = normalize( ( mul(nrm4,InvTModelMatrix) ).xyz );
+
+	pos4   = mul(pos4,ModelMatrix);
+	pos4.xyz += WorldSpaceEyePosition.xyz;
+	pos4   = mul(pos4,ViewProjMatrix);
+	pos4.z = pos4.w;
+
+	gl_Position = pos4;	
+	
+	colorVarying = ConstantColor.xyz;
+
+#if defined(ENV_MAP) 
+	float3 viewWS = normalize( posWS.xyz );
+    reflWSVarying = reflect( viewWS, nrmWS );
+#endif
+
+#ifdef FOG
+	float fogFactor = dot( pos4, FogParams );
+    fogFactor = clamp( fogFactor, 0.0, FogColor.w );
+	fogVarying.xyz = FogColor.xyz;
+	fogVarying.w   = 1.0 - fogFactor;
+#endif
+}

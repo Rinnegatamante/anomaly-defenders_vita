@@ -1,0 +1,52 @@
+// profile sce_vp_psp2
+
+#define _ANDROID
+#define POSTPROCESSING_ENABLED
+
+
+
+uniform float4x4 ModelViewProjMatrix;
+uniform float4x4 ModelMatrix;
+uniform float4 ConstantColor;
+uniform float4 PureDiffuseColor;
+uniform float4 VertexDenormalizationBox[2];
+uniform float4 MappingTransform;
+
+#ifdef FOG
+    uniform float4 FogParams;
+#endif
+
+void main(
+	float3 Position,
+	float2 UV0,
+	float2 out uv0Varying : TEXCOORD0,
+	float4 out colorVarying : COLOR,
+	float2 out uvCutoffAndFog : TEXCOORD1,
+	float4 out gl_Position : POSITION
+) {
+	float3 pos=VertexDenormalizationBox[0].xyz+Position*VertexDenormalizationBox[1].xyz;
+    float4 posWS = mul(float4(pos,1),ModelMatrix);
+	gl_Position=mul(float4(pos,1),ModelViewProjMatrix);
+
+    float val = 0.0;
+
+    uv0Varying = UV0*MappingTransform.xy+MappingTransform.zw;
+
+#ifdef USE_LOCAL_COLOR
+    val = ConstantColor.w;
+    float4 color = ConstantColor;
+    color.w = PureDiffuseColor.w;
+#else
+    val = ConstantColor.x;
+    float4 color=PureDiffuseColor;
+	color.w*=ConstantColor.w;
+#endif
+
+#ifdef FOG
+    float fog = posWS.y*FogParams.x + FogParams.y;
+#else
+    float fog = 0.0;
+#endif
+    colorVarying=color;
+	uvCutoffAndFog=float2(val-uv0Varying.y, fog);
+}

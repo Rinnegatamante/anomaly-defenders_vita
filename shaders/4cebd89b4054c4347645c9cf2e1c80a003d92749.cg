@@ -1,0 +1,53 @@
+// profile sce_fp_psp2
+
+#define POSTPROCESSING_ENABLED
+#define _ANDROID
+#define BLEND_ALPHA
+#define FOG
+#define SOFTNESS
+#define TEXTURE_DESATURATION
+
+#ifdef FOG
+	#endif
+
+#ifdef TEXTURE_FRAME_INTERPOLATION
+		#endif
+#ifdef TEXTURE_DESATURATION
+	uniform float4 UserPSHParams[2];
+#endif
+uniform sampler2D Texture0;
+
+void main(
+	float4 colorVarying : COLOR,
+	float2 uv0Varying : TEXCOORD0,
+	float4 fogVarying : TEXCOORD4,
+	float2 uv1Varying : TEXCOORD1,
+	float frameFactor : TEXCOORD6,
+	float4 out gl_FragColor : COLOR
+) {
+	float4 color=colorVarying;
+	
+	float4 txt=tex2D(Texture0,uv0Varying.xy);
+#ifdef TEXTURE_FRAME_INTERPOLATION
+	float4 txt2=tex2D(Texture0,uv1Varying.xy);
+	txt=lerp(txt,txt2,frameFactor);
+#endif
+
+#ifdef TEXTURE_DESATURATION
+	float lum=dot(txt.xyz,UserPSHParams[1].xyz);
+	float3 lum3=float3(lum,lum,lum);
+	txt.xyz=txt.xyz*UserPSHParams[0].xyz+lum3;
+#endif
+
+	color*=txt;
+	
+#ifdef FOG
+	#ifdef BLEND_ALPHA
+		color.xyz = color.xyz * fogVarying.w + fogVarying.xyz;
+	#else
+		color *= fogVarying.w;
+	#endif
+#endif	
+
+	gl_FragColor=color;
+}

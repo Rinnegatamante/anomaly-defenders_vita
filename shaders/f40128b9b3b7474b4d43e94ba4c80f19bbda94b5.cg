@@ -1,0 +1,56 @@
+// profile sce_vp_psp2
+
+#define _ANDROID
+#define POSTPROCESSING_ENABLED
+#define FOG
+#define TEXTURE_FRAME_INTERPOLATION
+
+#ifdef TEXTURE_FRAME_INTERPOLATION
+		#endif
+
+#ifdef FOG
+	uniform float4 FogParams;
+	uniform float4 FogColor;
+	#endif
+
+uniform float4x4 ModelViewProjMatrix;
+uniform float4 UserVSHParams[5];
+
+void main(
+	float3 Position,
+	float4 Color,
+	float4 UV0,
+	float4 out colorVarying : COLOR,
+	float2 out uv0Varying : TEXCOORD0,
+	float2 out uv1Varying : TEXCOORD1,
+	float out frameFactor : TEXCOORD6,
+	float4 out fogVarying : TEXCOORD4,
+	float4 out gl_Position : POSITION
+) {
+	float3 pos=Position.xyz;
+	
+	int node  = int( Color.x * 255.0 );
+	float4 c1=UserVSHParams[node];			// color variables have been moved to ParticleVectors register due to ipad2 glsl crash
+	float4 c2=UserVSHParams[node+1];
+	
+	float4 color=c1*Color.w+c2*Color.y;
+//	float4 color=lerp(c1,c2,Color.y);	
+
+	float4 pos4 = float4( pos, 1.0 );
+    gl_Position = mul(pos4,ModelViewProjMatrix);
+	colorVarying=color*UserVSHParams[4];
+	
+	uv0Varying = UV0.xy;
+
+#ifdef TEXTURE_FRAME_INTERPOLATION
+	uv1Varying  = UV0.zw;
+	frameFactor = Color.z;
+#endif
+
+#ifdef FOG
+	float fogFactor = dot( pos4, FogParams );
+    fogFactor = clamp( fogFactor, 0.0, FogColor.w );
+	fogVarying.xyz = FogColor.xyz * fogFactor;
+	fogVarying.w   = 1.0 - fogFactor;
+#endif
+}
