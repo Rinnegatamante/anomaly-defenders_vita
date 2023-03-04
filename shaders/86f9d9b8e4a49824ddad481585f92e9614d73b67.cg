@@ -1,0 +1,68 @@
+// profile sce_fp_psp2
+
+#define _ANDROID
+#define TEXTURE
+#define TEXTURE_ANIMATION
+
+
+#if defined(TEXTURE) || defined(VIDEO)
+	uniform sampler2D Texture0;
+	#endif
+#ifdef VIDEO
+	uniform sampler2D Texture1;
+// Y
+	uniform sampler2D Texture2;
+// U
+	uniform sampler2D Texture3;
+// V
+#endif
+
+
+
+#ifdef TEXTURE_ANIMATION
+	uniform float4 AnimatedTextureFrameFactor;
+#endif
+
+void main(
+	float4 uv0Varying : TEXCOORD0,
+	float4 colorVarying : COLOR,
+	float4 out gl_FragColor : COLOR
+) {
+	float4 color=colorVarying;
+
+#ifdef VIDEO
+	float videoColorY = tex2D( Texture1, uv0Varying.xy ).x;
+	float videoColorU = tex2D( Texture2, uv0Varying.xy ).x;
+	float videoColorV = tex2D( Texture3, uv0Varying.xy ).x;
+
+	videoColorY = 1.1643 * ( videoColorY - 0.0625 );
+	videoColorU -= 0.5;
+	videoColorV -= 0.5;
+
+	// YUV to RGB color conversion
+	float3 videoColor;
+	videoColor.x = videoColorY + videoColorV * 1.5958;
+	videoColor.y = videoColorY - videoColorU * 0.39173 - videoColorV * 0.81290;
+	videoColor.z = videoColorY + videoColorU * 2.017;
+
+	videoColor = clamp( videoColor, 0., 1. );
+	color.xyz *= videoColor;
+#endif
+
+#ifdef TEXTURE
+	float4 txt=tex2D(Texture0,uv0Varying.xy);
+	#ifdef TEXTURE_ANIMATION
+		float4 txt2=tex2D(Texture0,uv0Varying.zw);
+		txt=lerp(txt,txt2,AnimatedTextureFrameFactor.x);		
+	#endif
+
+	#ifdef ALPHA_ONLY_TEXTURE
+		color.w*=txt.w;
+	#elif defined(COLOR_ONLY_TEXTURE)
+		color.xyz*=txt.xyz;
+	#else
+		color*=txt;
+	#endif
+#endif
+	gl_FragColor=color;
+}

@@ -1,4 +1,7 @@
+// profile sce_vp_psp2
+
 #define _ANDROID
+
 
 uniform float4 UserVSHParams[ 2 ];
 

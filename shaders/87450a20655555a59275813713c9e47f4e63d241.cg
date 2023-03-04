@@ -115,7 +115,7 @@ vc+=BoneMatrices[biw+2]*BlendWeight.w;
 #ifdef ENV_MAP
 	float3 toEyeVector=pos-ObjectSpaceEyePosition.xyz;
 	float3 refl=reflect(toEyeVector,nor);
-	reflectedVector=(mul(float4(refl,0),ModelMatrix)).xyz;
+	reflectedVector=(ModelMatrix*float4(refl,0)).xyz;
 #endif
 
 #ifdef FOG

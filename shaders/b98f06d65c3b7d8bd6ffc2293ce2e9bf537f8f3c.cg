@@ -1,0 +1,215 @@
+// profile sce_vp_psp2
+
+#define _ANDROID
+#define ENV_MAP
+#define FOG
+#define LIGHT_PROBES
+#define SKINNING
+
+#if defined(VERTEX_COLOR)
+	#endif
+
+#if defined(SKINNING)
+	uniform float4 BoneMatrices[3*64];
+		#endif
+
+#if defined(NORMAL_MAP_TEXTURE)
+	#endif
+
+
+#if defined(TERRAIN_LIGHTMAP) || defined(LIGHTMAP)
+	#endif
+
+#if defined(TERRAIN_LIGHTMAP)
+	#endif
+
+#if defined(LIGHT_PROBES)
+	uniform 	float4 LightProbe[ 6 ];
+	uniform float4 LightProbeGradient[ 4 ];
+	#endif
+
+#ifdef FOG
+	uniform float4 FogParams;
+	uniform float4 FogColor;
+	#endif
+
+#if defined(SPECULAR)
+	#endif
+
+#if defined(NORMAL_MAP_TEXTURE)
+	#endif
+
+#ifdef ENV_MAP
+	#endif
+
+#if defined(ENV_MAP) || defined(SPECULAR) || defined(DEPTH_MULTIPLICATION)
+	uniform float4 WorldSpaceEyePosition;
+#endif
+
+#ifdef DISTORTION
+	uniform float4 DistortionParams;
+#endif
+
+uniform float4x4 ModelMatrix;
+uniform float4x4 InvTModelMatrix;
+#ifdef DEPTH_MULTIPLICATION
+    uniform float4x4 ViewProjMatrix;
+#endif
+uniform float4x4 ModelViewProjMatrix;
+
+uniform float4 ConstantColor;
+uniform float4 MappingTransform;
+uniform float4 LightmapUVMulAdd;
+uniform float4 SunDiffuseInvDirWS;
+uniform float4 SunSpecularColor;
+uniform float4 SunSpecularInvDirWS;
+uniform float4 SunSpecularExp;
+
+void main(
+	float3 Position,
+	float3 Normal,
+	float2 UV0,
+	float2 UV2,
+	float4 Color,
+	float4 BlendWeight,
+	float4 BlendIndices,
+	float4 Tangent,
+	float3 out colorVarying : COLOR,
+	float2 out uv0Varying : TEXCOORD0,
+	float2 out uvLMapVarying : TEXCOORD1,
+	float2 out uvScreenVarying : TEXCOORD2,
+	float3 out diffuseVarying : TEXCOORD3,
+	float4 out fogVarying : TEXCOORD4,
+	float3 out specularVarying : TEXCOORD6,
+	float3 out lightDirTSVarying : TEXCOORD7,
+	float3 out reflWSVarying : TEXCOORD8,
+	float4 out gl_Position : POSITION
+) {
+	float4 pos4 = float4( Position, 1.0 );
+	float4 nrm4 = float4( Normal, 0.0 );
+#if defined(NORMAL_MAP_TEXTURE)
+	float4 tgt4 = float4( Tangent.xyz, 0.0 );
+#endif
+
+#if defined(SKINNING)
+	#ifdef MULTI_BONE_SKINNING
+		int bix=int(BlendIndices.x);
+		int biy=int(BlendIndices.y);
+		int biz=int(BlendIndices.z);
+		int biw=int(BlendIndices.w);
+		float4 va=BoneMatrices[bix]*BlendWeight.x, vb=BoneMatrices[bix+1]*BlendWeight.x, vc=BoneMatrices[bix+2]*BlendWeight.x;
+		va+=BoneMatrices[biy]*BlendWeight.y;
+vb+=BoneMatrices[biy+1]*BlendWeight.y;
+vc+=BoneMatrices[biy+2]*BlendWeight.y;
+		va+=BoneMatrices[biz]*BlendWeight.z;
+vb+=BoneMatrices[biz+1]*BlendWeight.z;
+vc+=BoneMatrices[biz+2]*BlendWeight.z;
+		va+=BoneMatrices[biw]*BlendWeight.w;
+vb+=BoneMatrices[biw+1]*BlendWeight.w;
+vc+=BoneMatrices[biw+2]*BlendWeight.w;
+	#else
+		int bix=int(BlendIndices.x);
+		float4 va=BoneMatrices[bix], vb=BoneMatrices[bix+1], vc=BoneMatrices[bix+2];
+	#endif
+
+	pos4.xyz = float3(dot(pos4,va),dot(pos4,vb),dot(pos4,vc));
+	nrm4.xyz = float3(dot(nrm4.xyz,va.xyz),dot(nrm4.xyz,vb.xyz),dot(nrm4.xyz,vc.xyz));
+#if defined(NORMAL_MAP_TEXTURE)
+	tgt4.xyz = float3(dot(tgt4.xyz,va.xyz),dot(tgt4.xyz,vb.xyz),dot(tgt4.xyz,vc.xyz));
+#endif
+#endif
+
+#ifdef DISTORTION
+	float distortionSeed  = dot( pos4.xyz, DistortionParams.zzz ) + DistortionParams.x;
+	float distortionScale = sin( distortionSeed ) * DistortionParams.y;
+	pos4.xyz += nrm4.xyz * distortionScale;
+#endif
+
+#ifdef DEPTH_MULTIPLICATION
+    float depthMultiplier = clamp(-ModelMatrix[3][1]/1500.0,0.0,1.0);
+    pos4 = mul(pos4, ModelMatrix);
+    pos4.xyz += (WorldSpaceEyePosition.xyz * depthMultiplier);
+	gl_Position = mul(pos4, ViewProjMatrix);
+#else
+    gl_Position = mul(pos4, ModelViewProjMatrix);
+#endif
+
+#ifndef DEPTH_MULTIPLICATION
+	float3 posWS = ( mul(pos4, ModelMatrix) ).xyz;
+#else
+    float3 posWS = pos4.xyz;
+#endif
+	float3 nrmWS = normalize( ( mul(nrm4, InvTModelMatrix) ).xyz );
+
+	colorVarying = ConstantColor.xyz;
+#if defined(VERTEX_COLOR)
+	colorVarying.xyz *= Color.xyz;
+#endif
+	uv0Varying = UV0 * MappingTransform.xy + MappingTransform.zw;
+
+#if defined(TERRAIN_LIGHTMAP)
+	uvLMapVarying = posWS.xz * LightmapUVMulAdd.xy + LightmapUVMulAdd.zw;
+#elif defined(LIGHTMAP)
+	uvLMapVarying = UV2 * LightmapUVMulAdd.xy + LightmapUVMulAdd.zw;
+#endif
+
+#ifdef TERRAIN_LIGHTMAP
+	uvScreenVarying = gl_Position.xy / ( gl_Position.w * 2.0 ) + float2( 0.5, 0.5 );
+#endif
+
+#if defined(ENV_MAP) || defined(SPECULAR)
+	float3 viewWS = normalize( posWS.xyz - WorldSpaceEyePosition.xyz );
+#endif
+
+#ifdef ENV_MAP
+    reflWSVarying = reflect( viewWS, nrmWS );
+#endif
+
+#if defined(NORMAL_MAP_TEXTURE)
+	float3 tgtWS = normalize( ( mul(tgt4, InvTModelMatrix) ).xyz );
+	float3 binWS = cross( tgtWS, nrmWS );
+	lightDirTSVarying.x = dot( tgtWS, SunDiffuseInvDirWS.xyz );
+	lightDirTSVarying.y = dot( binWS, SunDiffuseInvDirWS.xyz );
+	lightDirTSVarying.z = dot( nrmWS, SunDiffuseInvDirWS.xyz );
+#endif
+
+#ifdef SPECULAR
+	float3 halfVecWS = normalize( SunSpecularInvDirWS.xyz - viewWS );
+#if defined(NORMAL_MAP_TEXTURE)
+	specularVarying.x = dot( tgtWS, halfVecWS );
+	specularVarying.y = dot( binWS, halfVecWS );
+	specularVarying.z = dot( nrmWS, halfVecWS );
+#else
+	float ndoth = clamp( dot( nrmWS, halfVecWS ), 0.0, 1.0 );
+	specularVarying = SunSpecularColor.xyz * exp2( SunSpecularExp.x * ndoth + SunSpecularExp.y );
+#endif
+#endif
+
+#if defined(LIGHT_PROBES)
+	float3 probeX = nrmWS.x>=0.0?LightProbe[1].xyz:LightProbe[0].xyz;
+	float3 probeY = nrmWS.y>=0.0?LightProbe[3].xyz:LightProbe[2].xyz;
+	float3 probeZ = nrmWS.z>=0.0?LightProbe[5].xyz:LightProbe[4].xyz;
+
+	float3 probeCenterWS = LightProbeGradient[ 0 ].xyz;
+	float3 gradX 		   = LightProbeGradient[ 1 ].xyz;
+	float3 gradY 		   = LightProbeGradient[ 2 ].xyz;
+	float3 gradZ 		   = LightProbeGradient[ 3 ].xyz;
+	float3 probeOffsetWS = posWS - probeCenterWS;
+
+	probeX += probeOffsetWS.xxx * gradX;
+	probeY += probeOffsetWS.yyy * gradY;
+	probeZ += probeOffsetWS.zzz * gradZ;
+
+	float3 sqNrmWS = nrmWS * nrmWS;
+	diffuseVarying =   sqNrmWS.x * probeX 
+				     + sqNrmWS.y * probeY
+				     + sqNrmWS.z * probeZ;
+#endif
+
+#ifdef FOG
+	float fogFactor = dot( pos4, FogParams );
+    fogFactor = clamp( fogFactor, 0.0, FogColor.w );
+	fogVarying.xyz = FogColor.xyz;
+	fogVarying.w   = 1.0 - fogFactor;
+#endif
+}

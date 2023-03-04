@@ -1,0 +1,21 @@
+// profile sce_fp_psp2
+
+#define _ANDROID
+#define BLEND_ALPHA
+
+uniform float4 UserPSHParams[ 1 ];
+uniform float4 ConstantColor;
+
+void main(
+	float2 uvVarying : TEXCOORD0,
+	float4 out gl_FragColor : COLOR
+) {
+    float4 color = ConstantColor;
+    float gradient = clamp( UserPSHParams[ 0 ].x - abs( uvVarying.x / uvVarying.y ), 0.0, 1.0 );
+#ifdef BLEND_ALPHA
+    color.w *= gradient;
+#else
+    color *= gradient;
+#endif
+    gl_FragColor = color;
+}

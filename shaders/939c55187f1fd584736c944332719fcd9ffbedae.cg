@@ -1,0 +1,25 @@
+// profile sce_fp_psp2
+
+#define _ANDROID
+
+
+uniform sampler2D Texture0;
+uniform sampler2D Texture1;
+
+
+void main(
+	float4 colorVarying : COLOR,
+	float2 uv0Varying : TEXCOORD0,
+	float2 uv1Varying : TEXCOORD1,
+	float4 paramVarying : TEXCOORD2,
+	float4 out gl_FragColor : COLOR
+) {
+	float4 color = colorVarying;
+	float4 txt1 = tex2D(Texture0,uv0Varying);
+	float4 txt2 = tex2D(Texture1, (uv1Varying.xy + paramVarying.xy));
+	txt2.w *= paramVarying.w;
+	
+	color *= lerp(txt1, txt1.w * txt2, txt2.w);
+	gl_FragColor = color;
+}
+

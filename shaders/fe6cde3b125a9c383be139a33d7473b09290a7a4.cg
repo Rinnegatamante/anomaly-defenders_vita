@@ -1,0 +1,25 @@
+// profile sce_fp_psp2
+
+#define _ANDROID
+
+uniform sampler2D Texture0;
+uniform float4 UserPSHParams[1];
+
+
+void main(
+	float2 uv0Varying : TEXCOORD0,
+	float2 uv1Varying : TEXCOORD1,
+	float2 uv2Varying : TEXCOORD2,
+	float2 uv3Varying : TEXCOORD3,
+	float2 uv4Varying : TEXCOORD4,
+	float2 uv5Varying : TEXCOORD5,
+	float2 uv6Varying : TEXCOORD6,
+	float4 out gl_FragColor : COLOR
+) {
+	float4 weights=UserPSHParams[0];
+	float4 color=tex2D(Texture0,uv0Varying)*weights.w;
+	color+=(tex2D(Texture0,uv1Varying) + tex2D(Texture0,uv6Varying))*weights.x;
+	color+=(tex2D(Texture0,uv2Varying) + tex2D(Texture0,uv5Varying))*weights.y;
+	color+=(tex2D(Texture0,uv3Varying) + tex2D(Texture0,uv4Varying))*weights.z;
+	gl_FragColor=color;
+}

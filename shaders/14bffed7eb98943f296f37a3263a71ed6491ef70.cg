@@ -1,0 +1,32 @@
+// profile sce_vp_psp2
+
+#define _ANDROID
+
+
+
+uniform float4 UserVSHParams[3];
+
+void main(
+	float3 Position,
+	float2 UV0,
+	float2 out uv0Varying : TEXCOORD0,
+	float2 out uv1Varying : TEXCOORD1,
+	float2 out uv2Varying : TEXCOORD2,
+	float2 out uv3Varying : TEXCOORD3,
+	float2 out uv4Varying : TEXCOORD4,
+	float2 out uv5Varying : TEXCOORD5,
+	float2 out uv6Varying : TEXCOORD6,
+	float4 out gl_Position : POSITION
+) {
+	float3 pos=Position;
+
+    gl_Position = float4(pos,1);
+
+	uv0Varying=UV0;
+	uv1Varying=UV0+UserVSHParams[0].xy;
+	uv2Varying=UV0+UserVSHParams[0].zw;
+	uv3Varying=UV0+UserVSHParams[1].xy;
+	uv4Varying=UV0+UserVSHParams[1].zw;
+	uv5Varying=UV0+UserVSHParams[2].xy;
+	uv6Varying=UV0+UserVSHParams[2].zw;
+}

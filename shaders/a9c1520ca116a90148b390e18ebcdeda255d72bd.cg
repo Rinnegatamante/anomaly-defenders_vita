@@ -1,0 +1,36 @@
+// profile sce_vp_psp2
+
+#define _ANDROID
+
+
+
+
+#ifdef ROUND_PROGRESS_MODE
+	#endif
+
+uniform float4x4 ModelViewProjMatrix;
+
+#ifdef DENORMALIZATION
+	uniform float4 VertexDenormalizationBox[2];
+#endif
+
+void main(
+	float3 Position,
+	float2 UV0,
+	float4 UV1,
+	float4 Color,
+	float4 out colorVarying : COLOR,
+	float4 out paramVarying : TEXCOORD1,
+	float2 out uv0Varying : TEXCOORD0,
+	float2 out dirVarying : TEXCOORD2,
+	float4 out gl_Position : POSITION
+) {
+	float3 pos=Position;
+    gl_Position = mul(float4(pos,1), ModelViewProjMatrix);
+    colorVarying = Color;
+	uv0Varying = UV0;
+    paramVarying = UV1;
+	#ifdef ROUND_PROGRESS_MODE
+		dirVarying=UV0-0.5;
+	#endif
+}

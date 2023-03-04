@@ -1,7 +1,10 @@
+// profile sce_fp_psp2
+
 #define _ANDROID
 
 uniform sampler2D Texture0;
 uniform float4 UserPSHParams[ 1 ];
+
 
 #define SAMPLE_WEIGHT	0.125
 

@@ -45,6 +45,28 @@ extern const char *BIONIC_ctype_;
 extern const short *BIONIC_tolower_tab_;
 extern const short *BIONIC_toupper_tab_;
 
+#define CONFIG_FILE_PATH "ux0:data/anomaly_defenders/settings.cfg"
+
+int graphics = 2; // Graphics Quality setting
+int antialiasing = 2; // Anti-Aliasing setting
+int tex_quality = 1; // Texture Quality setting
+
+void loadConfig(void) {
+	char buffer[30];
+	int value;
+
+	FILE *config = fopen(CONFIG_FILE_PATH, "r");
+
+	if (config) {
+		while (EOF != fscanf(config, "%[^ ] %d\n", buffer, &value)) {
+			if (strcmp("graphics", buffer) == 0) graphics = value;
+			else if (strcmp("antialiasing", buffer) == 0) antialiasing = value;
+			else if (strcmp("tex_quality", buffer) == 0) tex_quality = value;
+		}
+		fclose(config);
+	}
+}
+
 int pstv_mode = 0;
 int enable_dlcs = 0;
 
@@ -352,8 +374,9 @@ int sem_destroy_fake(int *uid) {
 
 static int *TotalMemeorySizeInMB = NULL;
 
+int mem_steps[] = {256, 768, 1024};
 void DeteremineSystemMemory(void) {
-	*TotalMemeorySizeInMB = MEMORY_NEWLIB_MB;
+	*TotalMemeorySizeInMB = mem_steps[tex_quality];
 }
 
 int FileSystem__IsAbsolutePath(void *this, const char *path) {
@@ -485,14 +508,9 @@ int GameConsolePrint(void *this, int a1, int a2, char *text, ...) {
 	return 0;
 }
 
-void *SendRequestServer(const char *a1, int a2, int *res) {
-	void *(*NameStringGen)(void *this, char *text) = so_symbol(&funky_mod, "_ZN10NameStringC1EPKc");
-	int (*NameStringSet)(void *this, void *text) = so_symbol(&funky_mod, "_ZN10NameString3SetERKS_");
-	NameStringGen(a1, 0);
-	NameStringSet(a1, (uintptr_t)funky_mod.text_base + 0x442D0C);
-	printf("SendRequestToServer\n");
-	*res = 1;
-	return a1;
+so_hook gfx_hook;
+int SetGFXQualityLevel(void *this, int level) {
+	return SO_CONTINUE(int, gfx_hook, this, graphics);
 }
 
 int GetScreenDensity() {
@@ -501,7 +519,7 @@ int GetScreenDensity() {
 
 void patch_game(void) {
 	hook_addr(so_symbol(&funky_mod, "_ZNK19ShaderProgramObject21_SetDummyBoneMatricesEj"), (uintptr_t)ret0);
-	//hook_addr(so_symbol(&funky_mod, "_ZN26XRayServerRequestInternals12_SendRequestEPKc"), (uintptr_t)ret0);
+	gfx_hook = hook_addr(so_symbol(&funky_mod, "_ZN14LiquidRenderer20__SetGFXQualityLevelEj"), (uintptr_t)SetGFXQualityLevel);
 	hook_addr((uintptr_t)funky_mod.text_base + 0x3F0014, (uintptr_t)_sync_synchronize);
 	hook_addr((uintptr_t)funky_mod.text_base + 0x3F0DF0, (uintptr_t)_sync_synchronize);
 	//hook_addr((uintptr_t)funky_mod.text_base + 0x399EF0, (uintptr_t)_sync_synchronize);
@@ -682,7 +700,7 @@ void patch_game(void) {
 	hook_addr(so_symbol(&funky_mod, "_Z12SetGLContextv"), (uintptr_t)ret0);
 	hook_addr(so_symbol(&funky_mod, "_Z16PresentGLContextv"), (uintptr_t)PresentGLContext);
 
-	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole5PrintEhhPKcz"), (uintptr_t)ret0);
+	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole5PrintEhhPKcz"), (uintptr_t)GameConsolePrint);
 	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole12PrintWarningEhPKcz"), (uintptr_t)ret0);
 	hook_addr(so_symbol(&funky_mod, "_ZN11GameConsole10PrintErrorEhPKcz"), (uintptr_t)ret0);
 
@@ -773,21 +791,31 @@ void glShaderSource_hook(GLuint shader, GLsizei count, const GLchar **string, co
 	char cg_path[128];
 	snprintf(cg_path, sizeof(cg_path), "app0:/shaders/%c%c/%s.cg.gxp", sha_name[0], sha_name[1], sha_name);
 	FILE *file = fopen(cg_path, "rb");
+	
+	if (!file) {
+		snprintf(cg_path, sizeof(cg_path), "app0:/shaders/%s.cg.gxp", sha_name);
+		file = fopen(cg_path, "rb");
+		if (file) {
+			char dst_name[128];
+			sprintf(dst_name, "ux0:data/anomaly_defenders/%c%c", sha_name[0], sha_name[1]);
+			sceIoMkdir(dst_name, 0777);
+			sprintf(dst_name, "ux0:data/anomaly_defenders/%c%c/%s.cg.gxp", sha_name[0], sha_name[1], sha_name);
+			copy_file(cg_path, dst_name);
+		}
+	}
 		
 	printf("Shader: %s\n", sha_name);
 	if (!file) {
-		sprintf(cg_path, "ux0:data/anomaly_defenders/%c%c", sha_name[0], sha_name[1]);
-		sceIoMkdir(cg_path, 0777);
-		snprintf(cg_path, sizeof(cg_path), "ux0:data/anomaly_defenders/%c%c/%s.glsl", sha_name[0], sha_name[1], sha_name);
+		snprintf(cg_path, sizeof(cg_path), "ux0:data/anomaly_defenders/%s.glsl", sha_name);
 		file = fopen(cg_path, "wb");
 		for (int i = 0; i < count; i++) {
 			fwrite(string[i], 1, strlen(string[i]), file);
 		}
 		fclose(file);
 		if (strstr(string[1], "gl_FragColor"))
-			file = fopen("app0:/shaders/0a/0a68b13ebc188c6be33b2e6c808b5904e9c8b11e.cg.gxp", "rb");
+			file = fopen("app0:/shaders/02/024dcf58ae697e85392d4fca52b23a8bff6f033d.cg.gxp", "rb");
 		else
-			file = fopen("app0:/shaders/1a/1afe13e534b9bafd69e5f26600194b3d157b0722.cg.gxp", "rb");
+			file = fopen("app0:/shaders/0f/0f5eadb5026a7818c1936252541481637a1c1213.cg.gxp", "rb");
 	} else {
 		/*char dst_name[128];
 		sprintf(dst_name, "ux0:data/anomaly_defenders/%c%c", sha_name[0], sha_name[1]);
@@ -1452,7 +1480,7 @@ int main(int argc, char *argv[]) {
 	scePowerSetGpuClockFrequency(222);
 	scePowerSetGpuXbarClockFrequency(166);
 
-	pstv_mode = sceCtrlIsMultiControllerSupported() ? 1 : 0;
+	loadConfig();
 
 	if (check_kubridge() < 0)
 		fatal_error("Error kubridge.skprx is not installed.");
@@ -1473,7 +1501,17 @@ int main(int argc, char *argv[]) {
 
 	vglSetupRuntimeShaderCompiler(SHARK_OPT_UNSAFE, SHARK_ENABLE, SHARK_ENABLE, SHARK_ENABLE);
 	vglSetupGarbageCollector(127, 0x20000);
-	vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_4X);
+	switch (antialiasing) {
+	case 0:
+		vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE);
+		break;
+	case 1:
+		vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_2X);
+		break;
+	default:
+		vglInitExtended(0, SCREEN_W, SCREEN_H, MEMORY_VITAGL_THRESHOLD_MB * 1024 * 1024, SCE_GXM_MULTISAMPLE_4X);
+		break;
+	}
 
 	// Playing the intro video if present)
 	/*SceIoStat st1;
