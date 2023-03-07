@@ -12,7 +12,15 @@ This wrapper has been tested only with v.1.01.
 
 ## Changelog
 
-### v1.0
+### v.1.1
+
+- Bound Start button to pause game.
+- Bound L Trigger to time freeze.
+- Bound R Trigget to fast forward.
+- Added configurable settings and related configurator app (Graphics Quality, Textures Quality, Anti-Aliasing).
+- Reworked Livearea assets (Thanks to Once13one).
+
+### v.1.0
 
 - Initial release.
 
@@ -85,3 +93,4 @@ cmake .. && make
 
 - CatoTheYounger for the screenshots and for testing the homebrew.
 - gl33ntwine for helping dealing with partial automatization of shaders translation.
+- Once13one for the Livearea assets.
