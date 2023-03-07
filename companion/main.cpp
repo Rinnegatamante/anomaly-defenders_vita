@@ -37,7 +37,7 @@ void loadConfig(void) {
 		while (EOF != fscanf(config, "%[^ ] %d\n", buffer, &value)) {
 			if (strcmp("graphics", buffer) == 0) graphics = value;
 			else if (strcmp("antialiasing", buffer) == 0) antialiasing = value;
-			else if (strcmp("texture", buffer) == 0) tex_quality = value;
+			else if (strcmp("tex_quality", buffer) == 0) tex_quality = value;
 		}
 		fclose(config);
 	}
