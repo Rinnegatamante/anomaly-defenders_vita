@@ -134,7 +134,7 @@ int ret1(void) {
 	return 1;
 }
 
-int clock_gettime(int clk_ik, struct timespec *t) {
+int clock_gettime_hook(int clk_ik, struct timespec *t) {
 	struct timeval now;
 	int rv = gettimeofday(&now, NULL);
 	if (rv)
@@ -965,7 +965,7 @@ static so_default_dynlib default_dynlib[] = {
 	{ "ceil", (uintptr_t)&ceil },
 	{ "ceilf", (uintptr_t)&ceilf },
 	{ "clearerr", (uintptr_t)&clearerr },
-	{ "clock_gettime", (uintptr_t)&clock_gettime },
+	{ "clock_gettime", (uintptr_t)&clock_gettime_hook },
 	// { "close", (uintptr_t)&close },
 	{ "cos", (uintptr_t)&cos },
 	{ "cosf", (uintptr_t)&cosf },

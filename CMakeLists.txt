@@ -28,7 +28,6 @@ add_executable(anomaly
 
 target_link_libraries(anomaly
   -Wl,--whole-archive pthread -Wl,--no-whole-archive
-  m
   stdc++
   openal
   imgui
@@ -58,6 +57,7 @@ target_link_libraries(anomaly
   ScePower_stub
   SceTouch_stub
   SceVshBridge_stub
+  m
 )
 
 add_executable(companion
@@ -92,11 +92,11 @@ vita_create_vpk(anomaly.vpk ${VITA_TITLEID} eboot.bin
   FILE ${CMAKE_SOURCE_DIR}/livearea/icon0.png sce_sys/icon0.png
        ${CMAKE_SOURCE_DIR}/livearea/bg0.png sce_sys/livearea/contents/bg0.png
        ${CMAKE_SOURCE_DIR}/livearea/template.xml sce_sys/livearea/contents/template.xml
-	   ${CMAKE_SOURCE_DIR}/livearea/conf.png sce_sys/livearea/contents/conf.png
-	   ${CMAKE_SOURCE_DIR}/livearea/human.png sce_sys/livearea/contents/human.png
-	   ${CMAKE_SOURCE_DIR}/livearea/pic0.png sce_sys/pic0.png
-       ${CMAKE_SOURCE_DIR}/compiled_shaders shaders
-	   ${CMAKE_SOURCE_DIR}/presets presets
+       ${CMAKE_SOURCE_DIR}/livearea/conf.png sce_sys/livearea/contents/conf.png
+       ${CMAKE_SOURCE_DIR}/livearea/human.png sce_sys/livearea/contents/human.png
+       ${CMAKE_SOURCE_DIR}/livearea/pic0.png sce_sys/pic0.png
+       ${CMAKE_SOURCE_DIR}/livearea/TROPHY.TRP sce_sys/trophy/ADEF00001_00/TROPHY.TRP
+       ${CMAKE_SOURCE_DIR}/presets presets
        ${CMAKE_SOURCE_DIR}/antialiasing antialiasing
        ${CMAKE_SOURCE_DIR}/textures textures
        ${CMAKE_BINARY_DIR}/companion.bin companion.bin
