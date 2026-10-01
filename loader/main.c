@@ -174,7 +174,7 @@ int pthread_mutexattr_settype_fake(pthread_mutexattr_t **m, int type) {
 	return 0;
 }
 
-int pthread_mutex_init_fake(pthread_mutex_t **uid, const pthread_mutexattr_t **mutexattr) {
+int pthread_mutex_init_fake(pthread_mutex_t **uid, pthread_mutexattr_t *const *mutexattr) {
 	pthread_mutex_t *m = calloc(1, sizeof(pthread_mutex_t));
 	if (!m)
 		return -1;
@@ -204,13 +204,13 @@ int pthread_mutex_lock_fake(pthread_mutex_t **uid) {
 	if (!*uid) {
 		ret = pthread_mutex_init_fake(uid, NULL);
 	} else if ((uintptr_t)*uid == 0x4000) {
-		pthread_mutexattr_t attr;
+		pthread_mutexattr_t *attr;
 		pthread_mutexattr_init_fake(&attr);
 		pthread_mutexattr_settype_fake(&attr, PTHREAD_MUTEX_RECURSIVE);
 		ret = pthread_mutex_init_fake(uid, &attr);
 		pthread_mutexattr_destroy_fake(&attr);
 	} else if ((uintptr_t)*uid == 0x8000) {
-		pthread_mutexattr_t attr;
+		pthread_mutexattr_t *attr;
 		pthread_mutexattr_init_fake(&attr);
 		pthread_mutexattr_settype_fake(&attr, PTHREAD_MUTEX_ERRORCHECK);
 		ret = pthread_mutex_init_fake(uid, &attr);
@@ -226,13 +226,13 @@ int pthread_mutex_unlock_fake(pthread_mutex_t **uid) {
 	if (!*uid) {
 		ret = pthread_mutex_init_fake(uid, NULL);
 	} else if ((uintptr_t)*uid == 0x4000) {
-		pthread_mutexattr_t attr;
+		pthread_mutexattr_t *attr;
 		pthread_mutexattr_init_fake(&attr);
 		pthread_mutexattr_settype_fake(&attr, PTHREAD_MUTEX_RECURSIVE);
 		ret = pthread_mutex_init_fake(uid, &attr);
 		pthread_mutexattr_destroy_fake(&attr);
 	} else if ((uintptr_t)*uid == 0x8000) {
-		pthread_mutexattr_t attr;
+		pthread_mutexattr_t *attr;
 		pthread_mutexattr_init_fake(&attr);
 		pthread_mutexattr_settype_fake(&attr, PTHREAD_MUTEX_ERRORCHECK);
 		ret = pthread_mutex_init_fake(uid, &attr);
@@ -314,13 +314,13 @@ int pthread_mutex_trylock_fake(pthread_mutex_t **uid) {
 		pthread_mutexattr_t attr;
 		pthread_mutexattr_init(&attr);
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-		ret = pthread_mutex_init_fake(uid, &attr);
+		ret = pthread_mutex_init_fake(uid, (pthread_mutexattr_t *const *)&attr);
 		pthread_mutexattr_destroy(&attr);
 	} else if ((uintptr_t)*uid == 0x8000) {
 		pthread_mutexattr_t attr;
 		pthread_mutexattr_init(&attr);
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-		ret = pthread_mutex_init_fake(uid, &attr);
+		ret = pthread_mutex_init_fake(uid, (pthread_mutexattr_t *const *)&attr);
 		pthread_mutexattr_destroy(&attr);
 	}
 	if (ret < 0)

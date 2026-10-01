@@ -10,6 +10,8 @@ endif()
 
 project(anomaly C CXX)
 include("${VITASDK}/share/vita.cmake" REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(openal REQUIRED IMPORTED_TARGET openal)
 set(VITA_APP_NAME "Anomaly Defenders")
 set(VITA_TITLEID  "ANOMALY04")
 set(VITA_VERSION  "01.00")
@@ -26,8 +28,11 @@ add_executable(anomaly
   loader/ctype_patch.c
 )
 
+set_target_properties(anomaly PROPERTIES LINKER_LANGUAGE CXX)
+
 target_link_libraries(anomaly
-  -Wl,--whole-archive pthread -Wl,--no-whole-archive
+  -pthread
+  PkgConfig::openal
   stdc++
   openal
   imgui
@@ -51,7 +56,6 @@ target_link_libraries(anomaly
   SceRazorCapture_stub
   SceFios2_stub
   SceGxm_stub
-  SceLibcBridge_stub
   SceShaccCg_stub
   SceSysmodule_stub
   ScePower_stub
@@ -81,6 +85,7 @@ target_link_libraries(companion
   SceSysmodule_stub
   SceTouch_stub
   SceKernelDmacMgr_stub
+  SceAppUtil_stub
 )
 
 vita_create_self(companion.bin companion UNSAFE)
@@ -106,3 +111,7 @@ add_custom_target(copy
   COMMAND cp eboot.bin D:/app/${VITA_TITLEID}/eboot.bin
   DEPENDS eboot.bin
 )
+
+set_property(SOURCE loader/so_util.c APPEND PROPERTY COMPILE_OPTIONS -Wno-error=return-mismatch -Wno-error=incompatible-pointer-types)
+
+set_property(SOURCE loader/main.c APPEND PROPERTY COMPILE_OPTIONS -std=gnu17)
